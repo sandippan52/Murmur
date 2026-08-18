@@ -1,0 +1,465 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id String @id @default(cuid())
+
+  username String @unique
+
+  email String @unique
+
+  passwordHash String?
+
+  provider String?
+
+  providerId String?
+
+  conversationParticipants ConversationParticipant[]
+
+  sentMessages Message[]
+
+  ownedCommunities Community[]
+
+  allComments Comment[]
+
+  avatarSeed String
+
+  avatarUrl String?
+
+  bio String?
+
+  posts Post[]
+
+  subscriptions CommunitySubscription[]
+
+  paymentTransactions PaymentTransaction[]
+
+  creatorPayouts CreatorPayout[]
+
+  followers Follow[] @relation("UserFollower")
+
+  followings Follow[] @relation("UserFollowing")
+
+  likedPosts PostLikes[]
+
+  likedComments CommentLikes[]
+
+  savedposts SavedPosts[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+enum Visibility {
+  PUBLIC
+  SUBSCRIBER_ONLY
+}
+
+enum PostType {
+  IMAGE
+  AUDIO
+  TEXT
+  VIDEO
+}
+
+model Post {
+  id String @id @default(cuid())
+
+  authorId String
+
+  author User @relation(fields: [authorId], references: [id])
+
+  communityId String?
+
+  community Community? @relation(fields: [communityId], references: [id])
+
+  postmedia PostMedia[]
+
+  postType PostType
+
+  title String
+
+  body String?
+
+  visibility Visibility @default(PUBLIC)
+
+  likesCount Int @default(0)
+
+  commentsCount Int @default(0)
+
+  commentDetail Comment[]
+
+  repostsCount Int @default(0)
+
+  likedBy PostLikes[]
+
+  savedBy SavedPosts[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@map("posts")
+}
+
+model Community {
+  id String @id @default(cuid())
+
+  posts Post[]
+
+  ownerId String
+
+  owner User @relation(fields: [ownerId], references: [id])
+
+  name String @unique
+
+  subscriptions CommunitySubscription[]
+
+  paymentTransactions PaymentTransaction[]
+
+  creatorPayouts CreatorPayout[]
+
+  description String?
+
+  monthlyPrice Decimal @db.Decimal(10, 2)
+
+  razorpayPlanId String?
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@map("communities")
+}
+
+enum MediaType {
+  IMAGE
+  AUDIO
+  VIDEO
+}
+
+model PostMedia {
+  id Int @id @default(autoincrement())
+
+  postId String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  fileUrl String
+
+  mediaType MediaType
+
+  duration Int?
+
+  fileSize Int?
+
+  createdAt DateTime @default(now())
+
+  @@map("postmedia")
+}
+
+enum Status {
+  PENDING
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+model CommunitySubscription {
+  id Int @id @default(autoincrement())
+
+  communityId String
+
+  community Community @relation(fields: [communityId], references: [id])
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id])
+
+  startsAt DateTime
+
+  expiresAt DateTime?
+
+  status Status
+
+  provider String?
+
+  providerCustomerId String?
+
+  providerSubscriptionId String?
+
+  transactions PaymentTransaction[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, communityId])
+  @@index([communityId])
+  @@index([userId])
+  @@index([providerSubscriptionId])
+  @@map("communitysubscription")
+}
+
+model Comment {
+  id Int @id @default(autoincrement())
+
+  postId String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  parentCommentId Int?
+
+  parent Comment? @relation("CommentReplies", fields: [parentCommentId], references: [id])
+
+  replies Comment[] @relation("CommentReplies")
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id])
+
+  content String
+
+  likesCount Int @default(0)
+
+  repliesCount Int @default(0)
+
+  likedBy CommentLikes[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@map("comment")
+}
+
+model Follow {
+  id Int @id @default(autoincrement())
+
+  followerId String
+
+  followingId String
+
+  follower User @relation("UserFollower", fields: [followerId], references: [id])
+
+  following User @relation("UserFollowing", fields: [followingId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@map("follows")
+}
+
+model PostLikes {
+  id Int @id @default(autoincrement())
+
+  postId String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@index([userId])
+  @@map("postlikes")
+}
+
+model CommentLikes {
+  id Int @id @default(autoincrement())
+
+  commentId Int
+
+  commentlike Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([userId, commentId])
+  @@index([commentId])
+  @@index([userId])
+  @@map("commentlikes")
+}
+
+model SavedPosts {
+  id Int @id @default(autoincrement())
+
+  postId String
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@map("savedposts")
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  REFUNDED
+}
+
+model PaymentTransaction {
+  id String @id @default(cuid())
+
+  subscriptionId Int
+
+  subscription CommunitySubscription @relation(fields: [subscriptionId], references: [id])
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id])
+
+  communityId String
+
+  community Community @relation(fields: [communityId], references: [id])
+
+  grossAmount Decimal @db.Decimal(10, 2)
+
+  platformFee Decimal @db.Decimal(10, 2)
+
+  creatorAmount Decimal @db.Decimal(10, 2)
+
+  currency String @default("INR")
+
+  provider String?
+
+  providerPaymentId String? @unique
+
+  status PaymentStatus
+
+  createdAt DateTime @default(now())
+
+  @@index([subscriptionId])
+  @@index([userId])
+  @@index([communityId])
+  @@index([providerPaymentId])
+  @@map("paymenttransactions")
+}
+
+enum PayoutStatus {
+  PENDING
+  PROCESSING
+  PAID
+  FAILED
+}
+
+model CreatorPayout {
+  id String @id @default(cuid())
+
+  creatorId String
+
+  creator User @relation(fields: [creatorId], references: [id])
+
+  communityId String
+
+  community Community @relation(fields: [communityId], references: [id])
+
+  amount Decimal @db.Decimal(10, 2)
+
+  currency String @default("INR")
+
+  status PayoutStatus
+
+  provider String?
+
+  providerTransferId String?
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([creatorId])
+  @@index([communityId])
+  @@index([providerTransferId])
+  @@map("creatorpayouts")
+}
+
+model Conversation {
+  id String @id @default(cuid())
+
+  directKey String @unique
+
+  participants ConversationParticipant[]
+
+  messages Message[]
+
+  lastMessageAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([lastMessageAt])
+  @@map("conversations")
+}
+
+model ConversationParticipant {
+  id String @id @default(cuid())
+
+  conversationId String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  userId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  lastReadAt DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+  @@index([conversationId])
+  @@map("conversationparticipants")
+}
+
+model Message {
+  id String @id @default(cuid())
+
+  conversationId String
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String
+
+  sender User @relation(fields: [senderId], references: [id])
+
+  content String
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([senderId])
+  @@map("messages")
+}
