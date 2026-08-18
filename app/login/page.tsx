@@ -1,73 +1,146 @@
 "use client";
 
 import { signIn } from "next-auth/react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+
 import {
   Mail,
   Lock,
-  
   ArrowRight,
   MessageCircle,
 } from "lucide-react";
 
-export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
 
-  const searchParams = useSearchParams();
+
+function LoginForm() {
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [email, setEmail] =
+    useState("");
+
+  const [password, setPassword] =
+    useState("");
+
+
+  const searchParams =
+    useSearchParams();
+
 
   useEffect(() => {
-  const message = searchParams.get("message");
 
-  if (message) {
-    alert(message);
-  }
-}, [searchParams]);
+    const message =
+      searchParams.get("message");
 
-  const handleLoginSubmit = async () => {
-    if (!email.trim() || !password.trim()) {
-      alert("Please enter your email and password.");
-      return;
+    if (message) {
+      alert(message);
     }
 
-    try {
-      setLoading(true);
+  }, [searchParams]);
 
-      const response = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
 
-      if (response?.error) {
-        alert("Invalid credentials");
+
+  const handleLoginSubmit =
+    async () => {
+
+      if (
+        !email.trim() ||
+        !password.trim()
+      ) {
+
+        alert(
+          "Please enter your email and password."
+        );
+
         return;
       }
 
-      window.location.href = "/home";
-    } catch (err) {
-      console.error("Login failed:", err);
-      alert("Something went wrong. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const handleGoogleLogin = async () => {
-    try {
-      await signIn("google", {
-        callbackUrl: "/home",
-      });
-    } catch (error) {
-      console.error("Google login failed:", error);
-    }
-  };
+      try {
+
+        setLoading(true);
+
+
+        const response =
+          await signIn(
+            "credentials",
+            {
+              email,
+              password,
+              redirect: false,
+            }
+          );
+
+
+        if (response?.error) {
+
+          alert(
+            "Invalid credentials"
+          );
+
+          return;
+        }
+
+
+        window.location.href =
+          "/home";
+
+      }
+
+      catch (err) {
+
+        console.error(
+          "Login failed:",
+          err
+        );
+
+        alert(
+          "Something went wrong. Please try again."
+        );
+
+      }
+
+      finally {
+
+        setLoading(false);
+
+      }
+
+    };
+
+
+  const handleGoogleLogin =
+    async () => {
+
+      try {
+
+        await signIn(
+          "google",
+          {
+            callbackUrl: "/home",
+          }
+        );
+
+      }
+
+      catch (error) {
+
+        console.error(
+          "Google login failed:",
+          error
+        );
+
+      }
+
+    };
+
 
   return (
+
     <div className="min-h-screen bg-black text-white flex items-center justify-center px-4 py-12">
 
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
@@ -77,6 +150,7 @@ export default function LoginPage() {
         <div className="absolute bottom-[-200px] left-[-100px] w-[400px] h-[400px] bg-purple-600/10 rounded-full blur-[120px]" />
 
       </div>
+
 
       <div className="relative w-full max-w-md">
 
@@ -106,9 +180,6 @@ export default function LoginPage() {
 
           </div>
 
-
-          {/* Heading */}
-
           <div className="text-center mb-8">
 
             <h1 className="text-3xl font-bold">
@@ -122,20 +193,19 @@ export default function LoginPage() {
           </div>
 
           <button
-         type="button"
-         onClick={handleGoogleLogin}
-         disabled={loading}
-         className="w-full flex items-center justify-center gap-3 bg-white text-black font-semibold py-3.5 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50"
->
-  <span className="text-lg font-bold">
-    G
-  </span>
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+            className="w-full flex items-center justify-center gap-3 bg-white text-black font-semibold py-3.5 rounded-xl hover:bg-zinc-200 transition disabled:opacity-50"
+          >
 
-  Continue with Google
-</button>
+            <span className="text-lg font-bold">
+              G
+            </span>
 
+            Continue with Google
 
-        
+          </button>
 
           <div className="flex items-center gap-4 my-7">
 
@@ -200,9 +270,11 @@ export default function LoginPage() {
                 autoComplete="current-password"
                 className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-3.5 pl-12 pr-4 text-white placeholder:text-zinc-600 outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
                 onKeyDown={(e) => {
+
                   if (e.key === "Enter") {
                     handleLoginSubmit();
                   }
+
                 }}
               />
 
@@ -218,17 +290,27 @@ export default function LoginPage() {
           >
 
             {loading ? (
+
               <>
+
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
 
                 Signing in...
+
               </>
+
             ) : (
+
               <>
+
                 Sign in
 
-                <ArrowRight size={19} />
+                <ArrowRight
+                  size={19}
+                />
+
               </>
+
             )}
 
           </button>
@@ -249,11 +331,29 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-zinc-600 text-xs mt-6">
+
           By continuing, you agree to use Murmur responsibly.
+
         </p>
 
       </div>
 
     </div>
+
   );
+}
+
+
+export default function LoginPage() {
+
+  return (
+
+    <Suspense fallback={null}>
+
+      <LoginForm />
+
+    </Suspense>
+
+  );
+
 }

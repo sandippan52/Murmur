@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useRef,
   useState,
@@ -15,10 +16,10 @@ import {
 
 import Avatar from "@/components/ui/Avatar";
 
-
-import { io, Socket } from "socket.io-client";
-
-
+import {
+  io,
+  Socket,
+} from "socket.io-client";
 
 
 interface User {
@@ -35,7 +36,6 @@ interface Message {
   content: string;
   createdAt: string;
   updatedAt: string;
-
   sender: User;
 }
 
@@ -55,15 +55,13 @@ interface ConversationResponse {
 }
 
 
-export default function MessagesPage() {
-
+function MessagesContent() {
   const searchParams = useSearchParams();
 
   const router = useRouter();
 
   const conversationId =
     searchParams.get("conversationId");
-
 
   const [messages, setMessages] =
     useState<Message[]>([]);
@@ -83,56 +81,41 @@ export default function MessagesPage() {
   const [error, setError] =
     useState("");
 
-
   const messagesEndRef =
     useRef<HTMLDivElement | null>(null);
 
   const socketRef =
-  useRef<Socket | null>(null);  
+    useRef<Socket | null>(null);
 
   useEffect(() => {
-
     if (!conversationId) {
-
       setLoading(false);
-
       return;
     }
 
-
     async function loadConversation() {
-
       try {
-
         setLoading(true);
-
         setError("");
 
         const conversationRes =
           await fetch("/api/conversations");
 
-
         const conversationData =
           await conversationRes.json();
 
-
         if (!conversationRes.ok) {
-
           throw new Error(
             conversationData?.error ||
-            "Failed to load conversations"
+              "Failed to load conversations"
           );
-
         }
 
         if (!Array.isArray(conversationData)) {
-
           throw new Error(
             "Invalid conversations response"
           );
-
         }
-
 
         const conversation =
           conversationData.find(
@@ -140,13 +123,10 @@ export default function MessagesPage() {
               item.id === conversationId
           );
 
-
         if (!conversation) {
-
           throw new Error(
             "Conversation not found"
           );
-
         }
 
         setOtherUser(
@@ -158,345 +138,256 @@ export default function MessagesPage() {
             `/api/conversations/${conversationId}/messages`
           );
 
-
         const messagesData =
           await messagesRes.json();
 
-
         if (!messagesRes.ok) {
-
           throw new Error(
             messagesData?.error ||
-            "Failed to load messages"
+              "Failed to load messages"
           );
-
         }
 
-
         if (!Array.isArray(messagesData)) {
-
           throw new Error(
             "Invalid messages response"
           );
-
         }
 
         setMessages(
           messagesData as Message[]
         );
-
-      }
-
-      catch (err) {
-
+      } catch (err) {
         console.error(
           "LOAD CONVERSATION ERROR:",
           err
         );
-
 
         setError(
           err instanceof Error
             ? err.message
             : "Failed to load conversation."
         );
-
-      }
-
-      finally {
-
+      } finally {
         setLoading(false);
-
       }
-
     }
-
 
     loadConversation();
-
   }, [conversationId]);
 
+  useEffect(() => {
+    let socket: Socket | null = null;
+
+    async function connectSocket() {
+      try {
+
+        const res =
+          await fetch("/api/socket/token");
+
+        const data =
+          await res.json();
+
+        if (!res.ok) {
+          throw new Error(
+            data?.error ||
+              "Failed to authenticate socket"
+          );
+        }
 
 
-useEffect(() => {
+        socket = io(
+          process.env.NEXT_PUBLIC_SOCKET_URL ||
+            "http://localhost:4000",
+          {
+            auth: {
+              token: data.token,
+            },
 
-  let socket: Socket | null = null;
-
-  async function connectSocket() {
-
-    try {
-
-      const res =
-        await fetch("/api/socket/token");
-
-      const data =
-        await res.json();
-
-
-      if (!res.ok) {
-
-        throw new Error(
-          data?.error ||
-          "Failed to authenticate socket"
+            transports: ["websocket"],
+          }
         );
 
-      }
+        socketRef.current =
+          socket;
 
-      socket = io(
-        process.env.NEXT_PUBLIC_SOCKET_URL ||
-        "http://localhost:4000",
-        {
-          auth: {
-            token: data.token,
-          },
-
-          transports: ["websocket"],
-        }
-      );
-
-
-      socketRef.current =
-        socket;
-
-  socket.on("connect", () => {
-
-  console.log(
-    "Connected to Socket.IO:",
-    socket?.id
-  );
-
-
-  if (conversationId) {
-
-    socket?.emit(
-      "joinConversation",
-      conversationId
-    );
-
-  }
-
-});
-
-
-socket.on(
-  "conversationJoined",
-  (joinedConversationId: string) => {
-
-    console.log(
-      "Joined conversation:",
-      joinedConversationId
-    );
-
-  }
-);
-
-
-socket.on(
-  "conversationError",
-  (message: string) => {
-
-    console.error(
-      "Conversation error:",
-      message
-    );
-
-  }
-);
-
-
-socket.on(
-  "newMessage",
-  (message: Message) => {
-
-    console.log(
-      "📨 New message:",
-      message
-    );
-
-
-    setMessages((prev) => {
-
-      if (
-        prev.some(
-          (item) =>
-            item.id === message.id
-        )
-      ) {
-
-        return prev;
-
-      }
-
-
-      return [
-        ...prev,
-        message,
-      ];
-
-    });
-
-  }
-);
-
-
-socket.on(
-  "messageError",
-  (message: string) => {
-
-    console.error(
-      "Message error:",
-      message
-    );
-
-    setError(message);
-
-  }
-);
-
-
-      socket.on(
-        "connect_error",
-        (error) => {
-
-          console.error(
-            "Socket connection error:",
-            error.message
+        socket.on("connect", () => {
+          console.log(
+            "Connected to Socket.IO:",
+            socket?.id
           );
 
-        }
-      );
+          if (conversationId) {
+            socket?.emit(
+              "joinConversation",
+              conversationId
+            );
+          }
+        });
 
-    } catch (error) {
+        socket.on(
+          "conversationJoined",
+          (
+            joinedConversationId: string
+          ) => {
+            console.log(
+              "Joined conversation:",
+              joinedConversationId
+            );
+          }
+        );
 
-      console.error(
-        "SOCKET CONNECTION ERROR:",
-        error
-      );
+        socket.on(
+          "conversationError",
+          (message: string) => {
+            console.error(
+              "Conversation error:",
+              message
+            );
+          }
+        );
 
+        socket.on(
+          "newMessage",
+          (message: Message) => {
+            console.log(
+              "📨 New message:",
+              message
+            );
+
+            setMessages((prev) => {
+              if (
+                prev.some(
+                  (item) =>
+                    item.id === message.id
+                )
+              ) {
+                return prev;
+              }
+
+              return [
+                ...prev,
+                message,
+              ];
+            });
+          }
+        );
+
+        socket.on(
+          "messageError",
+          (message: string) => {
+            console.error(
+              "Message error:",
+              message
+            );
+
+            setError(message);
+          }
+        );
+
+        socket.on(
+          "connect_error",
+          (error) => {
+            console.error(
+              "Socket connection error:",
+              error.message
+            );
+          }
+        );
+      } catch (error) {
+        console.error(
+          "SOCKET CONNECTION ERROR:",
+          error
+        );
+      }
     }
 
-  }
+    connectSocket();
 
+    return () => {
+      socket?.disconnect();
 
-  connectSocket();
-
-  return () => {
-
-    socket?.disconnect();
-
-    socketRef.current =
-      null;
-
-  };
-
-}, []);
-
-
+      socketRef.current =
+        null;
+    };
+  }, [conversationId]);
 
   useEffect(() => {
-
     messagesEndRef.current?.scrollIntoView({
       behavior: "smooth",
     });
-
   }, [messages]);
 
+  
 
   async function sendMessage(
-  e: FormEvent<HTMLFormElement>
-) {
+    e: FormEvent<HTMLFormElement>
+  ) {
+    e.preventDefault();
 
-  e.preventDefault();
+    if (!conversationId) {
+      return;
+    }
+
+    const trimmedContent =
+      content.trim();
+
+    if (!trimmedContent) {
+      return;
+    }
+
+    const socket =
+      socketRef.current;
+
+    if (!socket) {
+      setError(
+        "Realtime connection is not ready."
+      );
+
+      return;
+    }
+
+    if (!socket.connected) {
+      setError(
+        "Realtime connection is disconnected."
+      );
+
+      return;
+    }
+
+    try {
+      setSending(true);
+      setError("");
+
+      socket.emit(
+        "sendMessage",
+        {
+          conversationId,
+          content: trimmedContent,
+        }
+      );
+
+      setContent("");
+    } catch (error) {
+      console.error(
+        "SEND MESSAGE ERROR:",
+        error
+      );
+
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Failed to send message."
+      );
+    } finally {
+      setSending(false);
+    }
+  }
 
 
   if (!conversationId) {
-    return;
-  }
-
-
-  const trimmedContent =
-    content.trim();
-
-
-  if (!trimmedContent) {
-    return;
-  }
-
-
-  const socket =
-    socketRef.current;
-
-
-  if (!socket) {
-
-    setError(
-      "Realtime connection is not ready."
-    );
-
-    return;
-
-  }
-
-
-  if (!socket.connected) {
-
-    setError(
-      "Realtime connection is disconnected."
-    );
-
-    return;
-
-  }
-
-
-  try {
-
-    setSending(true);
-
-    setError("");
-
-
-    
-
-    socket.emit(
-      "sendMessage",
-      {
-        conversationId,
-        content: trimmedContent,
-      }
-    );
-
-    setContent("");
-
-  } catch (error) {
-
-    console.error(
-      "SEND MESSAGE ERROR:",
-      error
-    );
-
-
-    setError(
-      error instanceof Error
-        ? error.message
-        : "Failed to send message."
-    );
-
-  } finally {
-
-    setSending(false);
-
-  }
-
-}
-
-
-  if (!conversationId) {
-
     return (
-
       <div className="h-[calc(100vh-80px)] flex items-center justify-center px-4">
-
         <div className="text-center">
 
           <div className="text-5xl mb-4">
@@ -508,7 +399,8 @@ socket.on(
           </h1>
 
           <p className="text-zinc-500 mt-2">
-            Choose someone from your chats to start messaging.
+            Choose someone from your chats to
+            start messaging.
           </p>
 
           <button
@@ -521,35 +413,23 @@ socket.on(
           </button>
 
         </div>
-
       </div>
-
     );
-
   }
 
 
   if (loading) {
-
     return (
-
       <div className="h-[calc(100vh-80px)] flex items-center justify-center text-zinc-400">
-
         Loading conversation...
-
       </div>
-
     );
-
   }
 
 
   if (error && !otherUser) {
-
     return (
-
       <div className="h-[calc(100vh-80px)] flex items-center justify-center px-4">
-
         <div className="text-center">
 
           <div className="text-4xl mb-4">
@@ -574,16 +454,12 @@ socket.on(
           </button>
 
         </div>
-
       </div>
-
     );
-
   }
 
 
   return (
-
     <div className="h-[calc(100vh-80px)] flex flex-col bg-black">
 
       <div className="h-16 shrink-0 border-b border-zinc-800 bg-zinc-950 flex items-center px-4 md:px-6">
@@ -598,9 +474,7 @@ socket.on(
           ←
         </button>
 
-
         {otherUser && (
-
           <div className="flex items-center gap-3">
 
             <Avatar
@@ -614,23 +488,16 @@ socket.on(
             />
 
             <div>
-
               <h1 className="text-white font-semibold">
-
                 {otherUser.username}
-
               </h1>
 
               <p className="text-xs text-zinc-500">
-
                 Murmur
-
               </p>
-
             </div>
 
           </div>
-
         )}
 
       </div>
@@ -639,15 +506,12 @@ socket.on(
 
         <div className="max-w-4xl mx-auto space-y-3">
 
-
           {messages.length === 0 ? (
-
             <div className="h-full min-h-[400px] flex items-center justify-center">
 
               <div className="text-center">
 
                 {otherUser && (
-
                   <Avatar
                     image={
                       otherUser.avatarUrl
@@ -657,36 +521,27 @@ socket.on(
                     }
                     size={80}
                   />
-
                 )}
 
                 <h2 className="text-white text-lg font-semibold mt-4">
-
                   {otherUser?.username}
-
                 </h2>
 
                 <p className="text-zinc-500 mt-1">
-
                   Start the conversation 👋
-
                 </p>
 
               </div>
 
             </div>
-
           ) : (
-
             messages.map((message) => {
 
               const isMine =
                 message.senderId !==
                 otherUser?.id;
 
-
               return (
-
                 <div
                   key={message.id}
                   className={`flex ${
@@ -705,11 +560,8 @@ socket.on(
                   >
 
                     <p className="whitespace-pre-wrap break-words">
-
                       {message.content}
-
                     </p>
-
 
                     <div
                       className={`text-[10px] mt-1 ${
@@ -718,7 +570,6 @@ socket.on(
                           : "text-zinc-500"
                       }`}
                     >
-
                       {new Date(
                         message.createdAt
                       ).toLocaleTimeString(
@@ -728,40 +579,30 @@ socket.on(
                           minute: "2-digit",
                         }
                       )}
-
                     </div>
 
                   </div>
 
                 </div>
-
               );
-
             })
-
           )}
-
 
           <div
             ref={messagesEndRef}
           />
 
         </div>
-
       </div>
 
       {error && (
-
         <div className="px-4 pb-2">
 
           <p className="max-w-4xl mx-auto text-sm text-red-400">
-
             {error}
-
           </p>
 
         </div>
-
       )}
 
 
@@ -783,7 +624,6 @@ socket.on(
             className="flex-1 min-w-0 bg-zinc-900 border border-zinc-800 rounded-full px-5 py-3 text-sm text-white placeholder:text-zinc-500 outline-none focus:border-blue-500 transition disabled:opacity-50"
           />
 
-
           <button
             type="submit"
             disabled={
@@ -792,11 +632,9 @@ socket.on(
             }
             className="shrink-0 px-5 py-3 rounded-full bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition disabled:opacity-40 disabled:cursor-not-allowed"
           >
-
             {sending
               ? "..."
               : "Send"}
-
           </button>
 
         </form>
@@ -804,7 +642,20 @@ socket.on(
       </div>
 
     </div>
-
   );
+}
 
+
+export default function MessagesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="h-[calc(100vh-80px)] flex items-center justify-center text-zinc-400">
+          Loading messages...
+        </div>
+      }
+    >
+      <MessagesContent />
+    </Suspense>
+  );
 }
