@@ -6,11 +6,19 @@ import { jwtVerify } from "jose";
 import { prisma } from "@/lib/prisma";
 
 
+// const PORT = Number(
+//   process.env.SOCKET_PORT ||
+//   process.env.SOCKET_PORT ||
+//   4000
+// );
+
 const PORT = Number(
-  process.env.SOCKET_PORT ||
+  process.env.PORT ||
   process.env.SOCKET_PORT ||
   4000
 );
+
+
 
 const SOCKET_SECRET =
   process.env.SOCKET_SECRET;
