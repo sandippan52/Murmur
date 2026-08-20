@@ -3,13 +3,10 @@ import { auth } from "@/auth";
 
 export async function GET(req: Request) {
   try {
-    
-
     const session = await auth();
 
     let user = null;
 
-    
     if (session?.user?.email) {
       user = await prisma.user.findUnique({
         where: {
@@ -17,8 +14,6 @@ export async function GET(req: Request) {
         },
       });
     }
-
-    
 
     const subscribedCommunityIds = new Set<string>();
 
@@ -41,19 +36,26 @@ export async function GET(req: Request) {
         });
 
       activeSubscriptions.forEach((subscription) => {
-        subscribedCommunityIds.add(
-          subscription.communityId
-        );
+        subscribedCommunityIds.add(subscription.communityId);
       });
     }
-
-    
 
     const posts = await prisma.post.findMany({
       include: {
         author: true,
         community: true,
         postmedia: true,
+
+        likedBy: user
+          ? {
+              where: {
+                userId: user.id,
+              },
+              select: {
+                id: true,
+              },
+            }
+          : false,
       },
 
       orderBy: {
@@ -61,19 +63,19 @@ export async function GET(req: Request) {
       },
     });
 
-    
-
     const response = posts.map((post) => {
+      const isLiked = user
+        ? post.likedBy.length > 0
+        : false;
 
-     
-
+      
       if (post.visibility === "PUBLIC") {
         return {
           ...post,
 
           locked: false,
 
-          isLiked: false,
+          isLiked,
         };
       }
 
@@ -118,8 +120,6 @@ export async function GET(req: Request) {
         };
       }
 
-      
-
       const isCreator =
         post.authorId === user.id;
 
@@ -134,19 +134,17 @@ export async function GET(req: Request) {
         isCreator || isSubscriber;
 
       
-
       if (hasAccess) {
         return {
           ...post,
 
           locked: false,
 
-          isLiked: false,
+          isLiked,
         };
       }
 
-      
-
+    
       return {
         id: post.id,
 
@@ -186,14 +184,11 @@ export async function GET(req: Request) {
       };
     });
 
-    
-
     return Response.json(response, {
       headers: {
         "Cache-Control": "no-store",
       },
     });
-
   } catch (err) {
     console.error("Home API error:", err);
 
