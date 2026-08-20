@@ -348,46 +348,7 @@ Subscriptions
 </div>
 
 </Card>
-
-<div className="mt-8">
-
-        <button
-          onClick={() => setTab("Posts")}
-          className={`pb-4 transition ${
-            tab === "Posts"
-              ? "text-white border-b-2 border-blue-500 font-semibold"
-              : "text-zinc-500 hover:text-white"
-          }`}
-        >
-          Posts
-        </button>
-
-        <button
-          onClick={() => setTab("Communities")}
-          className={`pb-4 transition ${
-            tab === "Communities"
-              ? "text-white border-b-2 border-blue-500 font-semibold"
-              : "text-zinc-500 hover:text-white"
-          }`}
-        >
-          Communities
-        </button>
-
-        {profile.isMe && (
-          <button
-            onClick={() => setTab("Subscriptions")}
-            className={`pb-4 transition ${
-              tab === "Subscriptions"
-                ? "text-white border-b-2 border-blue-500 font-semibold"
-                : "text-zinc-500 hover:text-white"
-            }`}
-          >
-            Subscriptions
-          </button>
-        )}
-      </div>
           
-
       
 
 {tab === "Posts" && (
