@@ -353,7 +353,7 @@ Subscriptions
 
 {tab === "Posts" && (
 
-<div className="space-y-6">
+<div className="mt-6 space-y-6">
 
 {posts.length === 0 ? (
 
@@ -390,7 +390,7 @@ onComment={() => {}}
 
 {tab === "Communities" && (
 
-<div className="space-y-5">
+<div className="mt-6 space-y-5">
 
 {profile.isMe && (
 
@@ -491,7 +491,7 @@ View →
 
 {profile.isMe && tab === "Subscriptions" && (
 
-<div className="space-y-5">
+<div className="mt-6 space-y-5">
 
 {subscriptions.length === 0 ? (
 
