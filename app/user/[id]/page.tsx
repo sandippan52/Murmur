@@ -15,13 +15,6 @@ import { Post } from "@/types/post";
 
 type Tab = "Posts" | "Communities" | "Subscriptions";
 
-interface Followers {
-  followerId: string;
-}
-
-interface Followings {
-  followingId: string;
-}
 
 interface Community {
   id: string;
@@ -53,9 +46,9 @@ interface Profile {
 
   bio: string | null;
 
-  followers: Followers[];
-
-  followings: Followings[];
+  followersCount: number;
+  
+  followingCount: number;
 
   ownedCommunities: Community[];
 
@@ -140,18 +133,17 @@ export default function UserProfilePage() {
     const data = await res.json();
 
     setProfile((prev) => {
-      if (!prev) return prev;
+  if (!prev) return prev;
 
-      return {
-        ...prev,
+  return {
+    ...prev,
 
-        isFollowing: data.isFollowing,
+    isFollowing: data.isFollowing,
 
-        followers: Array(data.followersCount).fill({
-          followerId: "",
-        }),
-      };
-    });
+    followersCount: data.followersCount,
+  };
+});
+
   }
 
   async function startConversation() {
@@ -238,12 +230,12 @@ export default function UserProfilePage() {
               />
 
               <StatCard
-                value={profile.followers.length}
+                value={profile.followersCount}
                 label="Followers"
               />
 
               <StatCard
-                value={profile.followings.length}
+                value={profile.followingCount}
                 label="Following"
               />
 

@@ -6,8 +6,6 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    
-
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -17,7 +15,6 @@ export async function GET(
       );
     }
 
-    
     const myself = await prisma.user.findUnique({
       where: {
         email: session.user.email,
@@ -34,10 +31,7 @@ export async function GET(
       );
     }
 
-    
-
     const { id } = await params;
-
 
     const profile = await prisma.user.findUnique({
       where: {
@@ -68,10 +62,6 @@ export async function GET(
             community: true,
           },
         },
-
-        followers: true,
-
-        followings: true,
       },
     });
 
@@ -86,9 +76,20 @@ export async function GET(
       );
     }
 
-
     const isMe = myself.id === profile.id;
 
+    // Get actual follower/following counts
+    const followersCount = await prisma.follow.count({
+      where: {
+        followingId: profile.id,
+      },
+    });
+
+    const followingCount = await prisma.follow.count({
+      where: {
+        followerId: profile.id,
+      },
+    });
 
     const activeSubscriptions =
       await prisma.communitySubscription.findMany({
@@ -113,14 +114,12 @@ export async function GET(
       )
     );
 
-
     const posts = profile.posts.map((post) => {
-
       if (post.visibility === "PUBLIC") {
         return {
           ...post,
           locked: false,
-          isLiked: !!post.likesCount,
+          isLiked: false,
         };
       }
 
@@ -128,10 +127,9 @@ export async function GET(
         return {
           ...post,
           locked: false,
-          isLiked: !!post.likesCount,
+          isLiked: false,
         };
       }
-
 
       const isSubscriber =
         post.communityId
@@ -142,10 +140,9 @@ export async function GET(
         return {
           ...post,
           locked: false,
-          isLiked: !!post.likesCount,
+          isLiked: false,
         };
       }
-
 
       return {
         id: post.id,
@@ -178,12 +175,11 @@ export async function GET(
 
         isLiked: false,
 
-        
         body: null,
+
         postmedia: [],
       };
     });
-
 
     const isFollowing = await prisma.follow.findUnique({
       where: {
@@ -194,35 +190,39 @@ export async function GET(
       },
     });
 
+    return Response.json(
+      {
+        id: profile.id,
 
-    return Response.json({
-      id: profile.id,
+        username: profile.username,
 
-      username: profile.username,
+        avatarSeed: profile.avatarSeed,
 
-      avatarSeed: profile.avatarSeed,
+        avatarUrl: profile.avatarUrl,
 
-      avatarUrl: profile.avatarUrl,
+        bio: profile.bio,
 
-      bio: profile.bio,
+        followersCount,
 
-      followers: profile.followers,
+        followingCount,
 
-      followings: profile.followings,
+        ownedCommunities: profile.ownedCommunities,
 
-      ownedCommunities: profile.ownedCommunities,
+        subscriptions: profile.subscriptions,
 
-      subscriptions: profile.subscriptions,
+        posts,
 
-      posts,
+        isMe,
 
-      isMe,
-
-      isFollowing: !!isFollowing,
-    });
-
+        isFollowing: !!isFollowing,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (err) {
-
     console.error(err);
 
     return Response.json(
