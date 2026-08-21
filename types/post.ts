@@ -11,6 +11,8 @@ export interface Post {
 
     isLiked:boolean
 
+    postType: "IMAGE" | "VIDEO" | "AUDIO";
+
     author:{
         id:string
         username:string

@@ -36,6 +36,8 @@ interface Post {
 
   isLiked: boolean;
 
+  postType: "IMAGE" | "VIDEO" | "AUDIO";
+
   author: Author;
 
   community: Community | null;
@@ -214,11 +216,19 @@ export default function PostCard({
 
   </Link>
 
-) : (
+) : post.postmedia.length > 0 && (
 
-  post.postmedia.length > 0 && (
+  <div className="mt-5">
 
-    <div className="mt-5">
+    {post.postType === "VIDEO" ? (
+
+      <video
+        src={post.postmedia[0].fileUrl}
+        controls
+        className="w-full max-h-[650px] object-contain bg-black"
+      />
+
+    ) : (
 
       <Link href={`/posts/${post.id}`}>
 
@@ -232,9 +242,9 @@ export default function PostCard({
 
       </Link>
 
-    </div>
+    )}
 
-  )
+  </div>
 
 )}
 
