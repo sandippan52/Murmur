@@ -35,6 +35,7 @@ export default function Posts() {
     isLiked: boolean;
     likesCount: number;
     commentsCount: number;
+    postType: "IMAGE" | "VIDEO" | "AUDIO";
     visibility: "PUBLIC" | "SUBSCRIBER_ONLY";
     locked: boolean;
   }
@@ -393,21 +394,31 @@ export default function Posts() {
               <>
                 {post.postmedia?.[0] && (
 
-                  <div className="mt-8">
+  <div className="mt-8">
 
-                    <Image
-                      src={
-                        post.postmedia[0].fileUrl
-                      }
-                      alt={post.title}
-                      width={1200}
-                      height={700}
-                      className="w-full object-cover max-h-[650px]"
-                    />
+    {post.postType === "VIDEO" ? (
 
-                  </div>
+      <video
+        src={post.postmedia[0].fileUrl}
+        controls
+        className="w-full max-h-[650px] object-contain bg-black"
+      />
 
-                )}
+    ) : (
+
+      <Image
+        src={post.postmedia[0].fileUrl}
+        alt={post.title}
+        width={1200}
+        height={700}
+        className="w-full object-cover max-h-[650px]"
+      />
+
+    )}
+
+  </div>
+
+)}
 
                 {post.body && (
 
