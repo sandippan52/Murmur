@@ -146,10 +146,11 @@ export async function POST(req: NextRequest) {
 
 
 
-export async function GET() {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ conversationId: string }> }
+) {
   try {
-   
-
     const session = await auth();
 
     if (!session?.user?.email) {
@@ -158,9 +159,6 @@ export async function GET() {
         { status: 401 }
       );
     }
-
-
-   
 
     const currentUser = await prisma.user.findUnique({
       where: {
@@ -175,101 +173,61 @@ export async function GET() {
       );
     }
 
+    const { conversationId } = await params;
 
-    
-
-    const conversations =
-      await prisma.conversation.findMany({
-
+    const conversation =
+      await prisma.conversation.findFirst({
         where: {
+          id: conversationId,
+
           participants: {
             some: {
               userId: currentUser.id,
             },
           },
         },
+      });
+
+    if (!conversation) {
+      return NextResponse.json(
+        { error: "Conversation not found" },
+        { status: 404 }
+      );
+    }
+
+    const messages =
+      await prisma.message.findMany({
+        where: {
+          conversationId,
+        },
 
         orderBy: {
-          lastMessageAt: "desc",
+          createdAt: "asc",
         },
 
         include: {
-
-          participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                  avatarUrl: true,
-                  avatarSeed: true,
-                },
-              },
-            },
-          },
-
-          messages: {
-            orderBy: {
-              createdAt: "desc",
-            },
-
-            take: 1,
-
+          sender: {
             select: {
               id: true,
-              content: true,
-              senderId: true,
-              createdAt: true,
+              username: true,
+              avatarUrl: true,
+              avatarSeed: true,
             },
           },
-
         },
       });
 
-
-    
-
-    const formattedConversations =
-      conversations.map((conversation) => {
-
-        const otherParticipant =
-          conversation.participants.find(
-            (participant) =>
-              participant.userId !== currentUser.id
-          );
-
-        const lastMessage =
-          conversation.messages[0] ?? null;
-
-        return {
-          id: conversation.id,
-
-          otherUser:
-            otherParticipant?.user ?? null,
-
-          lastMessage,
-
-          lastMessageAt:
-            conversation.lastMessageAt,
-        };
-      });
-
-
-    
-
-    return NextResponse.json(
-      formattedConversations
-    );
+    return NextResponse.json(messages);
 
   } catch (error) {
     console.error(
-      "GET CONVERSATIONS ERROR:",
+      "GET MESSAGES ERROR:",
       error
     );
 
     return NextResponse.json(
       {
-        error: "Failed to fetch conversations",
+        error: "Failed to fetch messages",
       },
       { status: 500 }
     );
