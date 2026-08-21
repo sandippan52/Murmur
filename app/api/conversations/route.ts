@@ -147,8 +147,7 @@ export async function POST(req: NextRequest) {
 
 
 export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ conversationId: string }> }
+  req: NextRequest
 ) {
   try {
     const session = await auth();
@@ -160,11 +159,14 @@ export async function GET(
       );
     }
 
-    const currentUser = await prisma.user.findUnique({
-      where: {
-        email: session.user.email,
-      },
-    });
+
+    const currentUser =
+      await prisma.user.findUnique({
+        where: {
+          email: session.user.email,
+        },
+      });
+
 
     if (!currentUser) {
       return NextResponse.json(
@@ -173,61 +175,97 @@ export async function GET(
       );
     }
 
-    const { conversationId } = await params;
 
-    const conversation =
-      await prisma.conversation.findFirst({
+    const conversations =
+      await prisma.conversation.findMany({
         where: {
-          id: conversationId,
-
           participants: {
             some: {
               userId: currentUser.id,
             },
           },
         },
-      });
-
-    if (!conversation) {
-      return NextResponse.json(
-        { error: "Conversation not found" },
-        { status: 404 }
-      );
-    }
-
-    const messages =
-      await prisma.message.findMany({
-        where: {
-          conversationId,
-        },
-
-        orderBy: {
-          createdAt: "asc",
-        },
 
         include: {
-          sender: {
+          participants: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  username: true,
+                  avatarUrl: true,
+                  avatarSeed: true,
+                },
+              },
+            },
+          },
+
+          messages: {
+            orderBy: {
+              createdAt: "desc",
+            },
+
+            take: 1,
+
             select: {
               id: true,
-              username: true,
-              avatarUrl: true,
-              avatarSeed: true,
+              content: true,
+              senderId: true,
+              createdAt: true,
             },
           },
         },
       });
 
-    return NextResponse.json(messages);
+
+    const result =
+      conversations.map(
+        (conversation) => {
+
+          const otherParticipant =
+            conversation.participants.find(
+              (participant) =>
+                participant.userId !==
+                currentUser.id
+            );
+
+
+          const lastMessage =
+            conversation.messages[0] ?? null;
+
+
+          return {
+            id: conversation.id,
+
+            otherUser:
+              otherParticipant?.user ??
+              null,
+
+            lastMessage,
+
+            lastMessageAt:
+              lastMessage?.createdAt
+                ? lastMessage.createdAt.toISOString()
+                : "",
+          };
+        }
+      );
+
+
+    return NextResponse.json(result);
 
   } catch (error) {
+
     console.error(
-      "GET MESSAGES ERROR:",
+      "GET CONVERSATIONS ERROR:",
       error
     );
 
+
     return NextResponse.json(
       {
-        error: "Failed to fetch messages",
+        error:
+          "Failed to load conversations",
       },
       { status: 500 }
     );
